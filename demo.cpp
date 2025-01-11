@@ -5,7 +5,7 @@ TcpSocketWorker::TcpSocketWorker(const QString& ip, quint16 port, QObject* paren
 	: QObject(parent), m_ip(ip), m_port(port), m_socket(nullptr) {}
 
 QTcpSocket* TcpSocketWorker::getSocket() {
-	return m_socket;
+	return m_socket; 
 }
 
 void TcpSocketWorker::startWork() {
