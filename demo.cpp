@@ -5,7 +5,7 @@ TcpSocketWorker::TcpSocketWorker(const QString& ip, quint16 port, QObject* paren
 	: QObject(parent), m_ip(ip), m_port(port), m_socket(nullptr) {}
 
 QTcpSocket* TcpSocketWorker::getSocket() {
-	return m_socket; 
+	return m_socket;
 }
 
 void TcpSocketWorker::startWork() {
@@ -31,6 +31,27 @@ void TcpSocketWorker::onConnected() {
 		return;
 	}
 
+	std::string msg = "client send msg:client port:";
+	msg += std::to_string(m_socket->localPort());
+
+	
+
+
+	//// 用户名和密码
+	//std::string userName1 = "user" + std::to_string(m_socket->localPort());
+	//std::string password1 = "123";
+
+	//PDU* registerPdu1 = mkPDU(msg.length() + 1);
+	//registerPdu1->uiMsgType = ENUM_MSG_TYPE_REGIST_REQUEST;
+	//strncpy(registerPdu1->caData, userName1.c_str(), 32);
+	//strncpy(registerPdu1->caData + 32, password1.c_str(), 32);
+	//strncpy((char*)(registerPdu1->caMsg), msg.c_str(), msg.length());
+	//((char*)registerPdu1->caMsg)[msg.length()] = '\0';
+	//getSocket()->write((char*)registerPdu1, registerPdu1->uiPDULen);
+	//getSocket()->flush();
+	//free(registerPdu1);
+	//return;
+
 	// 用户名和密码
 	std::string userName = "user" + std::to_string(m_socket->localPort());
 	std::string password = "123";
@@ -40,11 +61,12 @@ void TcpSocketWorker::onConnected() {
 	registerPdu->uiMsgType = ENUM_MSG_TYPE_REGIST_REQUEST;
 	strncpy(registerPdu->caData, userName.c_str(), 32);
 	strncpy(registerPdu->caData + 32, password.c_str(), 32);
+
 	getSocket()->write((char*)registerPdu, registerPdu->uiPDULen);
 	getSocket()->flush();
 	free(registerPdu);
 
-	QString curPath = QString("./users/%1").arg(QString::fromStdString(userName));
+	QString curPath = QString("../users/%1").arg(QString::fromStdString(userName));
 
 
 	// 延迟1秒后发送登录请求
@@ -63,7 +85,7 @@ void TcpSocketWorker::onConnected() {
 		QTimer::singleShot(1000, this, [=]() {
 			QString strCurPath = curPath;
 			qDebug() << "curPath:" << strCurPath;
-			QString m_strUploadFilePath = "C:/Users/陈鑫源/Desktop/11111.rar";
+			QString m_strUploadFilePath = "C:/Users/陈鑫源/Desktop/1.txt";
 			if (m_strUploadFilePath.isEmpty()) {
 				return;
 			}
@@ -79,6 +101,7 @@ void TcpSocketWorker::onConnected() {
 			}
 
 			qint64 fileSize = file->size();
+			cout1 << m_strUploadFilePath<< "文件大小：" << fileSize;
 			if (!file->open(QIODevice::ReadOnly)) {
 				qDebug() << "Failed to open the file!";
 				delete file; // 释放资源
@@ -104,7 +127,7 @@ void TcpSocketWorker::onConnected() {
 
 			QTimer::singleShot(1000, this, [=]() {
 
-				int flag = getSocket()->localPort()%2;
+				int flag = getSocket()->localPort() % 2;
 				switch (flag)
 				{
 					//每隔500ms发送
@@ -281,7 +304,7 @@ void TcpSocketWorker::onConnected() {
 	// 文件上传逻辑
 	QString strCurPath = curPath;
 	qDebug() << "curPath:" << strCurPath;
-	QString m_strUploadFilePath = "C:/Users/陈鑫源/Desktop/1.cpp";
+	QString m_strUploadFilePath = "C:/Users/陈鑫源/Desktop/1.txt";
 	if (m_strUploadFilePath.isEmpty()) {
 		//QMessageBox::warning(this, "上传文件", "上传文件名称不能为空");
 		return;
@@ -498,7 +521,7 @@ void TcpSocketWorker::onReadyRead() {
 		break;
 	}
 	}
-
+	qDebug() << pdu->caData;
 	// 释放内存
 	free(pdu);
 	pdu = NULL;
