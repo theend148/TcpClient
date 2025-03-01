@@ -2,9 +2,9 @@
 #include "ui_tcpclient.h"
 #include"privatechat.h"
 #include<QFile>
+#include<QDir>
 #include"my.h"
 #define QABSTRACTSOCKET_DEBUG
-
 
 QString userName = nullptr;
 
@@ -86,7 +86,7 @@ void TcpClient::loadConfig()
 {
 	// : 代表读取的是资源文件
 	// 设置文件路径
-	QFile file(":/client.config");
+	QFile file(".././client.config");
 	// 设置打开方式，尝试打开
 	if (file.open(QIODevice::ReadOnly)) {
 		// 进行文件读取

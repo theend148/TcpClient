@@ -53,6 +53,6 @@ int main(int argc, char *argv[])
 //    l.addItem("你哦好2");
 //    w.updateFriend(&l);
     w.setWindowTitle("客户端");
-    //w.show();
+    w.show();
     return a.exec();
 }

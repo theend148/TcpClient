@@ -1,14 +1,13 @@
 cmake_minimum_required(VERSION 3.16)
-project(TcpClient VERSION 1.0 LANGUAGES CXX)
+project(main VERSION 1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
+set(CMAKE_PREFIX_PATH "/home/cxy/qt6/6.5.3/gcc_64/lib/cmake/")
 # 自动处理 Qt 的 MOC、UIC、RCC
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
-
 # 查找 Qt 包
 find_package(Qt6 REQUIRED COMPONENTS 
     Core
