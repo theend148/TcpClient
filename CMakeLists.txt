@@ -8,6 +8,7 @@ set(CMAKE_PREFIX_PATH "/home/cxy/qt6/6.5.3/gcc_64/lib/cmake/")
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
+set(CMAKE_BUILD_TYPE Debug)
 # 查找 Qt 包
 find_package(Qt6 REQUIRED COMPONENTS 
     Core

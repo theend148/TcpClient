@@ -164,12 +164,13 @@ void TcpClient::login(PDU* pdu)
 {
 	if (0 == strcmp(pdu->caData, LOGIN_OK))
 	{
-		m_strCurPath = QString("./%1").arg(m_strLoginName);
+		m_strCurPath = QString("../users/%1").arg(m_strLoginName);
 		QMessageBox::information(this, "登录", LOGIN_OK);
 		//TODO-----这里实现登录成功之后的页面跳转
 		OpeWidget::getInstance().setWindowTitle("User:" + userName);
 
 		OpeWidget::getInstance().show();
+		OpeWidget::getInstance().getBook()->flushDir();
 		this->hide();
 	}
 	else if (0 == strcmp(pdu->caData, LOGIN_FAIL))
@@ -376,139 +377,140 @@ void TcpClient::recvMsg()
 	case ENUM_MSG_TYPE_REGIST_RESPOND:
 	{
 		regist(pdu);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_REGIST_RESPOND";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_REGIST_RESPOND 注册成功";
 		break;
 	}
 	case ENUM_MSG_TYPE_LOGIN_RESPOND:
 	{
 		login(pdu);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_LOGIN_RESPOND";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_LOGIN_RESPOND 登录成功";
 		break;
 	}
 	case ENUM_MSG_TYPE_ALL_ONLINE_RESPOND:
 	{
 		OpeWidget::getInstance().getFriend()->showAllOnlineUser(pdu);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_ALL_ONLINE_RESPOND";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_ALL_ONLINE_RESPOND 显示所有在线用户";
 		break;
 	}
 	case ENUM_MSG_TYPE_SEARCH_USER_RESPOND:
 	{
 		searchUser(pdu);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_SEARCH_USER_RESPOND";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_SEARCH_USER_RESPOND 搜索用户";
 		break;
 	}
 	// TODO-----服务器转发请求  添加好友相关
 	case ENUM_MSG_TYPE_ADD_FRIEND_REQUEST: {
 		addFriendRequest(pdu);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_ADD_FRIEND_REQUEST";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_ADD_FRIEND_REQUEST 添加好友请求";
 		break;
 	}
 	case ENUM_MSG_TYPE_ADD_FRIEND_RESPOND: {
 		QMessageBox::information(this, "添加好友", pdu->caData);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_ADD_FRIEND_RESPOND";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_ADD_FRIEND_RESPOND 添加好友响应";
 		break;
 	}
 	case ENUM_MSG_TYPE_ADD_FRIEND_AGREE: {
 		addFriendAgree(pdu);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_ADD_FRIEND_AGREE";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_ADD_FRIEND_AGREE 添加好友同意";
 		break;
 	}
 	case ENUM_MSG_TYPE_ADD_FRIEND_REFUSE: {
 		addFriendFefuse(pdu);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_ADD_FRIEND_REFUSE";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_ADD_FRIEND_REFUSE 添加好友拒绝";
 		break;
 	}
 	case ENUM_MSG_TYPE_FLUSH_FRIEND_RESPOND: {
 		OpeWidget::getInstance().getFriend()->updateFriendList(pdu);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_FLUSH_FRIEND_RESPOND";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_FLUSH_FRIEND_RESPOND 刷新好友列表";
 		break;
 	}
 										   // 接受转发回来的消息
 	case ENUM_MSG_TYPE_DELETE_FRIEND_REQUEST: {
 		deleteFriend(pdu);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_DELETE_FRIEND_REQUEST";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_DELETE_FRIEND_REQUEST 删除好友请求";
 		break;
 	}
 	case ENUM_MSG_TYPE_DELETE_FRIEND_RESPOND: {
 		QMessageBox::information(this, "删除好友", pdu->caData);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_DELETE_FRIEND_RESPOND";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_DELETE_FRIEND_RESPOND 删除好友响应";
 		break;
 	}
 											// 转发消息
 	case ENUM_MSG_TYPE_PRIVATE_CHAT_REQUEST: {
 		privateChat(pdu);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_PRIVATE_CHAT_REQUEST";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_PRIVATE_CHAT_REQUEST 私聊请求";
 		break;
 	}
 	case ENUM_MSG_TYPE_GROUP_CHAT_REQUEST: {
 		OpeWidget::getInstance().getFriend()->updateGroupMsg(pdu);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_GROUP_CHAT_REQUEST";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_GROUP_CHAT_REQUEST 群聊请求";
 		break;
 	}
 	case ENUM_MSG_TYPE_CREATE_DIR_RESPOND:
 	{
 		createDir(pdu);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_CREATE_DIR_RESPOND";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_CREATE_DIR_RESPOND 创建文件夹";
 		break;
 	}
 	case ENUM_MSG_TYPE_FLUSH_DIR_RESPOND:
 	{
 		flushDir(pdu);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_FLUSH_DIR_RESPOND";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_FLUSH_DIR_RESPOND 刷新文件夹";
 		break;
 	}
 	case ENUM_MSG_TYPE_DEL_DIR_RESPOND:
 	{
 		delDir(pdu);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_DEL_DIR_RESPOND";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_DEL_DIR_RESPOND 删除文件夹";
 		break;
 	}
 	case ENUM_MSG_TYPE_RENAME_DIR_RESPOND:
 	{
 		renameDir(pdu);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_RENAME_DIR_RESPOND";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_RENAME_DIR_RESPOND 重命名文件夹";
 		break;
 	}
 	case ENUM_MSG_TYPE_ENTER_DIR_RESPOND:
 	{
 		enterDir(pdu);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_ENTER_DIR_RESPOND";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_ENTER_DIR_RESPOND 进入文件夹";
 		break;
 	}
 	case ENUM_MSG_TYPE_UPLOAD_FILE_RESPOND:
 	{
 		QMessageBox::information(this, "上传文件", pdu->caData);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_UPLOAD_FILE_RESPOND";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_UPLOAD_FILE_RESPOND 上传文件";
+		OpeWidget::getInstance().getBook()->flushDir();
 		break;
 	}
 	case ENUM_MSG_TYPE_DEL_FILE_RESPOND:
 	{
 		QMessageBox::information(this, "删除文件", pdu->caData);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_DEL_FILE_RESPOND";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_DEL_FILE_RESPOND 删除文件";
 		break;
 	}
 	case ENUM_MSG_TYPE_DOWNLOAD_FILE_RESPOND:
 	{
 		qDebug() << pdu->caData;
 		downloadFilePre(pdu);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_DOWNLOAD_FILE_RESPOND";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_DOWNLOAD_FILE_RESPOND 下载文件";
 		break;
 	}
 	case ENUM_MSG_TYPE_SHARE_FILE_RESPOND:
 	{
 		QMessageBox::information(this, "分享文件", pdu->caData);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_SHARE_FILE_RESPOND";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_SHARE_FILE_RESPOND 分享文件";
 		break;
 	}
 	case ENUM_MSG_TYPE_SHARE_FILE_NOTE:
 	{
 		shareFileNote(pdu);
-		qDebug() << "receive msg type: ENUM_MSG_TYPE_SHARE_FILE_NOTE";
+		qDebug() << "receive msg type: ENUM_MSG_TYPE_SHARE_FILE_NOTE 分享文件";
 		break;
 	}
 	default:
 	{
-		qDebug() << "receive msg type: UNKNOWN";
+		qDebug() << "receive msg type: UNKNOWN 未知消息";
 		break;
 	}
 	}

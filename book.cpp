@@ -6,6 +6,8 @@
 #include<QFile>
 #include"sharefile.h"
 #include"my.h"
+#include <vector>
+#include <algorithm>
 
 
 //TODO-----这里的组件创建方式梳理一下
@@ -69,23 +71,48 @@ void Book::updateDirList(const PDU* pdu)
 	{
 		return;
 	}
-	// 清除之前的列表，避免这里的add导致重复，也可以使用for循环 m_pBookListW->item(rowIdx)来进行删除每一行
+	// 清除之前的列表
 	m_pBookListW->clear();
+
+	// 创建两个向量分别存储文件夹和文件
+	std::vector<QString> directories;
+	std::vector<QString> files;
+
+	// 解析所有文件信息
 	FileInfo* pFileInfo = NULL;
 	int iFileCount = pdu->uiMsgLen / sizeof(FileInfo);
 	for (int i = 0; i < iFileCount; i++)
 	{
 		pFileInfo = (FileInfo*)(pdu->caMsg) + i;
-		QListWidgetItem* pItem = new QListWidgetItem;
 		if (0 == pFileInfo->iFileType)
 		{
-			pItem->setIcon(QIcon(QPixmap(":/map/dir.png")));
+			directories.push_back(QString(pFileInfo->caFileName));
 		}
 		else if (1 == pFileInfo->iFileType)
 		{
-			pItem->setIcon(QIcon(QPixmap(":/map/reg.jpg")));
+			files.push_back(QString(pFileInfo->caFileName));
 		}
-		pItem->setText(pFileInfo->caFileName);
+	}
+
+	// 对文件夹和文件名分别排序
+	std::sort(directories.begin(), directories.end());
+	std::sort(files.begin(), files.end());
+
+	// 先添加所有文件夹
+	for (const QString& dirName : directories)
+	{
+		QListWidgetItem* pItem = new QListWidgetItem;
+		pItem->setIcon(QIcon(QPixmap("../map/dir.png")));
+		pItem->setText(dirName);
+		m_pBookListW->addItem(pItem);
+	}
+
+	// 再添加所有文件
+	for (const QString& fileName : files)
+	{
+		QListWidgetItem* pItem = new QListWidgetItem;
+		pItem->setIcon(QIcon(QPixmap("../map/reg.jpg")));
+		pItem->setText(fileName);
 		m_pBookListW->addItem(pItem);
 	}
 }
@@ -120,7 +147,7 @@ QString Book::getShareFileName()
 	return m_shareFileName;
 }
 
-void Book::createDir()
+void Book::createDir()//创建文件夹
 {
 	QString strDirName = QInputDialog::getText(this, "新建文件夹", "新文件夹名称");
 	if (strDirName.isEmpty())
@@ -211,8 +238,7 @@ void Book::enterDir(const QModelIndex& index)
 
 	
 	// 缓存数据
-	m_enterPath = QString("%1").arg(strDirName);
-
+	m_enterPath = strCurPath + QString("/%1").arg(strDirName);
 
 	QFileInfo fileInfo(m_enterPath);
 	//处理双击文件下载
@@ -237,7 +263,7 @@ void Book::returnPre()
 	// 当前目录
 	QString strCurPath = TcpClient::getInstance().curPath();
 	// 用户根目录
-	QString strRootPath = "./" + TcpClient::getInstance().loginName();
+	QString strRootPath = "../users/" + TcpClient::getInstance().loginName();
 	// 如果当前目录就是用户根目录，代表没有上级目录了
 	if (strCurPath == strRootPath)
 	{
