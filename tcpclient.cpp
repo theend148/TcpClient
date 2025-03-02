@@ -3,7 +3,9 @@
 #include"privatechat.h"
 #include<QFile>
 #include<QDir>
+#include<thread>
 #include"my.h"
+#include <unistd.h>  // 添加这个头文件
 #define QABSTRACTSOCKET_DEBUG
 
 QString userName = nullptr;
@@ -21,7 +23,12 @@ TcpClient::TcpClient(QWidget* parent) :
 	connect(&m_tcpSocket, SIGNAL(connected()), this, SLOT(showConnect()));
 	// 服务器接受到数据槽函数
 	connect(&m_tcpSocket, SIGNAL(readyRead()), this, SLOT(recvMsg()));
-	// 链接服务器
+        connect(this, &TcpClient::downloadFileStart, this, [=]() {
+			std::cout<<"downloadFileStart"<<std::endl;
+			this->recvMsg();
+		});
+
+        // 链接服务器
 	m_tcpSocket.connectToHost(QHostAddress(m_strIp), m_usPort);
 	for (int i = 0; i < 0; ++i) {
 		QThread* thread = new QThread();  // 创建新的线程
@@ -302,6 +309,7 @@ void TcpClient::downloadFilePre(PDU* pdu)
 			return;
 		}
 	}
+	// emit downloadFileStart();
 }
 
 void TcpClient::shareFileNote(PDU* pdu)
@@ -336,6 +344,7 @@ void TcpClient::recvMsg()
 	// 如果是文件下载状态中
 	if (OpeWidget::getInstance().getBook()->getDownloadStatus())
 	{
+		
 		QByteArray buffer = m_tcpSocket.readAll();
 		// 简化命名使用
 		Book* pBook = OpeWidget::getInstance().getBook();
@@ -371,7 +380,7 @@ void TcpClient::recvMsg()
 	// 更新通信对象总大小
 	pdu->uiPDULen = uiPDULen;
 	// 读取剩余数据内容到通信对象中
-	m_tcpSocket.read((char*)pdu + sizeof(int), uiPDULen - sizeof(int));
+	int num=m_tcpSocket.read((char*)pdu + sizeof(int), uiPDULen - sizeof(int));
 	switch (pdu->uiMsgType)
 	{
 	case ENUM_MSG_TYPE_REGIST_RESPOND:

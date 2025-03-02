@@ -99,11 +99,11 @@ void Book::updateDirList(const PDU* pdu)
 	std::sort(files.begin(), files.end());
 
 	// 先添加所有文件夹
-	for (const QString& dirName : directories)
+	for (int i = 2; i < directories.size(); i++)
 	{
 		QListWidgetItem* pItem = new QListWidgetItem;
 		pItem->setIcon(QIcon(QPixmap("../map/dir.png")));
-		pItem->setText(dirName);
+		pItem->setText(directories[i]);
 		m_pBookListW->addItem(pItem);
 	}
 

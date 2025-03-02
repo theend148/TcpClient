@@ -46,7 +46,8 @@ public:
 	void setCurPath(QString strPath);
 
 	QVector<QTcpSocket*> sockets;
-
+signals:
+	void downloadFileStart();
 	// 槽函数
 public slots:
 	// 链接成功提示
