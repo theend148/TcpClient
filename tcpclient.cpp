@@ -5,7 +5,7 @@
 #include<QDir>
 #include<thread>
 #include"my.h"
-#include <unistd.h>  // 添加这个头文件
+//#include <unistd.h>  // 添加这个头文件
 #define QABSTRACTSOCKET_DEBUG
 
 QString userName = nullptr;
@@ -91,6 +91,11 @@ TcpClient::~TcpClient()
 
 void TcpClient::loadConfig()
 {
+	m_strIp = "172.27.231.225";
+
+	// 获取port
+	m_usPort = 10000;
+	return;
 	// : 代表读取的是资源文件
 	// 设置文件路径
 	QFile file(".././client.config");
@@ -107,11 +112,11 @@ void TcpClient::loadConfig()
 		// 按行切分数据
 		QStringList strList = fileStrData.split(" ");
 		// 获取ip
-		m_strIp = strList.at(0);
-		//m_strIp = "192.168.254.137";
+		//m_strIp = strList.at(0);
+		m_strIp = "172.27.231.225";
 
 		// 获取port
-		m_usPort = strList.at(1).toUShort();
+		m_usPort = 10000;
 		// 测试输出
 		qDebug() << fileStrData << "\n";
 		// 如果打开失败
@@ -260,6 +265,7 @@ void TcpClient::privateChat(PDU* pdu)
 void TcpClient::createDir(PDU* pdu)
 {
 	QMessageBox::information(this, "创建文件夹", pdu->caData);
+	OpeWidget::getInstance().getBook()->flushDir();
 }
 
 void TcpClient::flushDir(PDU* pdu)

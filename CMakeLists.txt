@@ -3,7 +3,7 @@ project(main VERSION 1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_PREFIX_PATH "/home/cxy/qt6/6.5.3/gcc_64/lib/cmake/")
+set(CMAKE_PREFIX_PATH "D:/software_install_position/Qt1/6.5.3/msvc2019_64/lib/cmake")
 # 自动处理 Qt 的 MOC、UIC、RCC
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)

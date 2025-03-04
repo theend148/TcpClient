@@ -102,7 +102,7 @@ void Book::updateDirList(const PDU* pdu)
 	for (int i = 2; i < directories.size(); i++)
 	{
 		QListWidgetItem* pItem = new QListWidgetItem;
-		pItem->setIcon(QIcon(QPixmap("../map/dir.png")));
+		pItem->setIcon(QIcon(QPixmap("../../../map/dir.png")));
 		pItem->setText(directories[i]);
 		m_pBookListW->addItem(pItem);
 	}
@@ -111,7 +111,7 @@ void Book::updateDirList(const PDU* pdu)
 	for (const QString& fileName : files)
 	{
 		QListWidgetItem* pItem = new QListWidgetItem;
-		pItem->setIcon(QIcon(QPixmap("../map/reg.jpg")));
+		pItem->setIcon(QIcon(QPixmap("../../../map/reg.jpg")));
 		pItem->setText(fileName);
 		m_pBookListW->addItem(pItem);
 	}
