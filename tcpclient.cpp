@@ -73,6 +73,8 @@ TcpClient::~TcpClient() {
 		qDebug() << i->socketDescriptor() << "will delete\n";
 		delete (i);
 	}
+	m_tcpSocket.close();
+	std::cout<<"TcpClient::~TcpClient() called myTcpSocket.close() and delete ui"<<std::endl;
 	delete ui;
 }
 
