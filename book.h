@@ -10,6 +10,8 @@
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QtCore/QCryptographicHash>
+#include <QProgressBar>
+#include <QLabel>
 
 #include "protocol.h"
 
@@ -56,6 +58,8 @@ public slots:
     void processUploadQueue();
     QString calculateFileMD5(const QString& filePath);
     void createUploadQueue();
+    void updateUploadProgress();
+    void onChunkUploadSuccess(qint64 chunkIndex);
 
 private:
     QListWidget* m_pBookListW;
@@ -74,6 +78,13 @@ private:
     bool m_pDownload;             // 是否处于文件下载状态
     QString m_shareFileName;
     QString m_strFileMD5;
+
+    // 进度显示相关
+    QProgressBar* m_pProgressBar;
+    QLabel* m_pProgressLabel;
+    QTimer* m_pProgressTimer;
+    qint64 m_uploadStartTime;
+    qint64 m_lastUploadedBytes;
 
 public:
     QQueue<FileChunk> m_uploadQueue;

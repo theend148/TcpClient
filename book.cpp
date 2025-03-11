@@ -29,6 +29,15 @@ Book::Book(QWidget* parent) : QWidget(parent) {
 	m_pDownloadFilePB = new QPushButton("下载文件");
 	m_pShareFilePB = new QPushButton("分享文件");
 
+	// 添加进度条和标签
+	m_pProgressBar = new QProgressBar;
+	m_pProgressBar->setRange(0, 100);
+	m_pProgressBar->setValue(0);
+	m_pProgressBar->setVisible(false);
+	
+	m_pProgressLabel = new QLabel("准备上传...");
+	m_pProgressLabel->setVisible(false);
+
 	QVBoxLayout* dirLayout = new QVBoxLayout;
 	dirLayout->addWidget(m_pReturnPB);
 	dirLayout->addWidget(m_pCreateDirPB);
@@ -42,12 +51,21 @@ Book::Book(QWidget* parent) : QWidget(parent) {
 	fileLayout->addWidget(m_pDownloadFilePB);
 	fileLayout->addWidget(m_pShareFilePB);
 
+	// 在布局中添加进度条和标签
+	QVBoxLayout* progressLayout = new QVBoxLayout;
+	progressLayout->addWidget(m_pProgressLabel);
+	progressLayout->addWidget(m_pProgressBar);
+
 	QHBoxLayout* hBoxLayout = new QHBoxLayout;
 	hBoxLayout->addWidget(m_pBookListW);
 	hBoxLayout->addLayout(dirLayout);
 	hBoxLayout->addLayout(fileLayout);
 
-	setLayout(hBoxLayout);
+	QVBoxLayout* mainLayout = new QVBoxLayout;
+	mainLayout->addLayout(hBoxLayout);
+	mainLayout->addLayout(progressLayout);
+
+	setLayout(mainLayout);
 	// 槽与信号
 	connect(m_pCreateDirPB, SIGNAL(clicked(bool)), this, SLOT(createDir()));
 	connect(m_pFlushDirPB, SIGNAL(clicked(bool)), this, SLOT(flushDir()));
@@ -62,6 +80,10 @@ Book::Book(QWidget* parent) : QWidget(parent) {
 	connect(m_pDownloadFilePB, SIGNAL(clicked(bool)), this,
 		SLOT(downloadFile()));
 	connect(m_pShareFilePB, SIGNAL(clicked(bool)), this, SLOT(shareFile()));
+
+	// 添加上传进度更新的定时器
+	m_pProgressTimer = new QTimer(this);
+	connect(m_pProgressTimer, SIGNAL(timeout()), this, SLOT(updateUploadProgress()));
 }
 
 void Book::updateDirList(const PDU* pdu) {
@@ -355,9 +377,15 @@ void Book::uploadPre() {
 	// 发送初始化请求
 	initializeUpload();
 
-	// 等待服务器响应后再开始上传
-	// 服务器会返回已上传的分片列表，更新 m_uploadedChunks
-	// 然后在收到响应后调用 createUploadQueue() 和开始上传流程
+	// 初始化进度显示
+	m_pProgressBar->setValue(0);
+	m_pProgressBar->setVisible(true);
+	m_pProgressLabel->setVisible(true);
+	m_uploadStartTime = QDateTime::currentMSecsSinceEpoch();
+	m_lastUploadedBytes = 0;
+	
+	// 启动进度更新定时器
+	m_pProgressTimer->start(1000); // 每秒更新一次
 }
 
 void Book::processUploadQueue() {
@@ -365,6 +393,9 @@ void Book::processUploadQueue() {
 
 	if (m_uploadQueue.isEmpty()) {
 		QMessageBox::information(this, "上传文件", "文件上传完成");
+		m_pProgressTimer->stop();
+		m_pProgressBar->setValue(100);
+		m_pProgressLabel->setText("上传完成");
 		flushDir();
 		return;
 	}
@@ -519,4 +550,62 @@ void Book::shareFile() {
 	if (ShareFile::getInstance().isHidden()) {
 		ShareFile::getInstance().show();
 	}
+}
+
+// 添加新的成员函数来更新进度
+void Book::updateUploadProgress() {
+	if (m_totalFileSize <= 0) return;
+	
+	// 计算已上传的字节数
+	qint64 uploadedBytes = 0;
+	for (qint64 chunkIndex : m_uploadedChunks) {
+		qint64 chunkSize = qMin(CHUNK_SIZE, m_totalFileSize - chunkIndex * CHUNK_SIZE);
+		uploadedBytes += chunkSize;
+	}
+	
+	// 计算当前进度百分比
+	int progressPercent = static_cast<int>((uploadedBytes * 100) / m_totalFileSize);
+	m_pProgressBar->setValue(progressPercent);
+	
+	// 计算上传速度
+	qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
+	qint64 elapsedTime = currentTime - m_uploadStartTime;
+	
+	if (elapsedTime > 0) {
+		// 计算每秒上传的KB数
+		double uploadSpeed = (uploadedBytes - m_lastUploadedBytes) / (elapsedTime / 1000.0) / 1024.0;
+		m_lastUploadedBytes = uploadedBytes;
+		m_uploadStartTime = currentTime;
+		
+		// 估算剩余时间（秒）
+		int remainingSeconds = 0;
+		if (uploadSpeed > 0) {
+			remainingSeconds = static_cast<int>((m_totalFileSize - uploadedBytes) / 1024.0 / uploadSpeed);
+		}
+		
+		// 更新进度标签
+		QString speedText = QString::number(uploadSpeed, 'f', 2);
+		QString remainingText;
+		
+		if (remainingSeconds > 60) {
+			int minutes = remainingSeconds / 60;
+			int seconds = remainingSeconds % 60;
+			remainingText = QString("%1分%2秒").arg(minutes).arg(seconds);
+		} else {
+			remainingText = QString("%1秒").arg(remainingSeconds);
+		}
+		
+		m_pProgressLabel->setText(QString("已上传: %1% - 速度: %2 KB/s - 剩余时间: %3")
+								 .arg(progressPercent)
+								 .arg(speedText)
+								 .arg(remainingText));
+	}
+}
+
+// 在收到服务器确认分片上传成功的响应后调用此函数
+void Book::onChunkUploadSuccess(qint64 chunkIndex) {
+	m_uploadedChunks.append(chunkIndex);
+	
+	// 继续处理队列中的下一个分片
+	m_pTimer->start(100); // 短暂延迟后继续上传
 }

@@ -571,7 +571,7 @@ void TcpClient::recvMsg() {
 
 		if (result == 0) {
 			// 分片上传成功，继续上传下一个分片
-			pBook->m_pTimer->start(1000);
+			pBook->onChunkUploadSuccess(chunkIndex);
 
 			//pBook->processUploadQueue();
 		}
