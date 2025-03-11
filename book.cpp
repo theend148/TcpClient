@@ -11,6 +11,7 @@
 #include "my.h"
 #include "sharefile.h"
 #include "tcpclient.h"
+#include "uploadprogressdialog.h"
 
 qint64 Book::CHUNK_SIZE = 20 * 1024 * 1024;  // 2MB
 
@@ -29,15 +30,6 @@ Book::Book(QWidget* parent) : QWidget(parent) {
 	m_pDownloadFilePB = new QPushButton("下载文件");
 	m_pShareFilePB = new QPushButton("分享文件");
 
-	// 添加进度条和标签
-	m_pProgressBar = new QProgressBar;
-	m_pProgressBar->setRange(0, 100);
-	m_pProgressBar->setValue(0);
-	m_pProgressBar->setVisible(false);
-	
-	m_pProgressLabel = new QLabel("准备上传...");
-	m_pProgressLabel->setVisible(false);
-
 	QVBoxLayout* dirLayout = new QVBoxLayout;
 	dirLayout->addWidget(m_pReturnPB);
 	dirLayout->addWidget(m_pCreateDirPB);
@@ -51,39 +43,30 @@ Book::Book(QWidget* parent) : QWidget(parent) {
 	fileLayout->addWidget(m_pDownloadFilePB);
 	fileLayout->addWidget(m_pShareFilePB);
 
-	// 在布局中添加进度条和标签
-	QVBoxLayout* progressLayout = new QVBoxLayout;
-	progressLayout->addWidget(m_pProgressLabel);
-	progressLayout->addWidget(m_pProgressBar);
-
 	QHBoxLayout* hBoxLayout = new QHBoxLayout;
 	hBoxLayout->addWidget(m_pBookListW);
 	hBoxLayout->addLayout(dirLayout);
 	hBoxLayout->addLayout(fileLayout);
 
-	QVBoxLayout* mainLayout = new QVBoxLayout;
-	mainLayout->addLayout(hBoxLayout);
-	mainLayout->addLayout(progressLayout);
-
-	setLayout(mainLayout);
+	setLayout(hBoxLayout);
 	// 槽与信号
-	connect(m_pCreateDirPB, SIGNAL(clicked(bool)), this, SLOT(createDir()));
-	connect(m_pFlushDirPB, SIGNAL(clicked(bool)), this, SLOT(flushDir()));
-	connect(m_pDelDirPB, SIGNAL(clicked(bool)), this, SLOT(delDir()));
-	connect(m_pRenameDirPB, SIGNAL(clicked(bool)), this, SLOT(renameDir()));
-	connect(m_pBookListW, SIGNAL(doubleClicked(QModelIndex)), this,
-		SLOT(enterDir(QModelIndex)));
-	connect(m_pReturnPB, SIGNAL(clicked(bool)), this, SLOT(returnPre()));
-	connect(m_pUploadFilePB, SIGNAL(clicked(bool)), this, SLOT(uploadPre()));
-	connect(m_pTimer, SIGNAL(timeout()), this, SLOT(processUploadQueue()));
-	connect(m_pDelFilePB, SIGNAL(clicked(bool)), this, SLOT(delFile()));
-	connect(m_pDownloadFilePB, SIGNAL(clicked(bool)), this,
-		SLOT(downloadFile()));
-	connect(m_pShareFilePB, SIGNAL(clicked(bool)), this, SLOT(shareFile()));
+	connect(m_pCreateDirPB, &QPushButton::clicked, this, &Book::createDir);
+	connect(m_pFlushDirPB, &QPushButton::clicked, this, &Book::flushDir);
+	connect(m_pDelDirPB, &QPushButton::clicked, this, &Book::delDir);
+	connect(m_pRenameDirPB, &QPushButton::clicked, this, &Book::renameDir);
+	connect(m_pBookListW, &QListWidget::doubleClicked, this,
+		&Book::enterDir);
+	connect(m_pReturnPB, &QPushButton::clicked, this, &Book::returnPre);
+	connect(m_pUploadFilePB, &QPushButton::clicked, this, &Book::uploadPre);
+	connect(m_pTimer, &QTimer::timeout, this, &Book::processUploadQueue);
+	connect(m_pDelFilePB, &QPushButton::clicked, this, &Book::delFile);
+	connect(m_pDownloadFilePB, &QPushButton::clicked, this,
+		&Book::downloadFile);
+	connect(m_pShareFilePB, &QPushButton::clicked, this, &Book::shareFile);
 
 	// 添加上传进度更新的定时器
 	m_pProgressTimer = new QTimer(this);
-	connect(m_pProgressTimer, SIGNAL(timeout()), this, SLOT(updateUploadProgress()));
+	connect(m_pProgressTimer, &QTimer::timeout, this, &Book::updateUploadProgress);
 }
 
 void Book::updateDirList(const PDU* pdu) {
@@ -378,9 +361,13 @@ void Book::uploadPre() {
 	initializeUpload();
 
 	// 初始化进度显示
-	m_pProgressBar->setValue(0);
-	m_pProgressBar->setVisible(true);
-	m_pProgressLabel->setVisible(true);
+	int idx = m_strUploadFilePath.lastIndexOf('/');
+	QString fileName = m_strUploadFilePath.right(m_strUploadFilePath.size() - idx - 1);
+	
+	// 创建并显示上传进度对话框
+	m_pUploadDialog = new UploadProgressDialog(fileName, this);
+	m_pUploadDialog->show();
+	
 	m_uploadStartTime = QDateTime::currentMSecsSinceEpoch();
 	m_lastUploadedBytes = 0;
 	
@@ -392,10 +379,14 @@ void Book::processUploadQueue() {
 	m_pTimer->stop();
 
 	if (m_uploadQueue.isEmpty()) {
-		QMessageBox::information(this, "上传文件", "文件上传完成");
+		if (m_pUploadDialog) {
+			m_pUploadDialog->setCompleted();
+			// 延迟关闭对话框
+			QTimer::singleShot(1000, m_pUploadDialog, &QDialog::close);
+			m_pUploadDialog->deleteLater();
+			m_pUploadDialog = nullptr;
+		}
 		m_pProgressTimer->stop();
-		m_pProgressBar->setValue(100);
-		m_pProgressLabel->setText("上传完成");
 		flushDir();
 		return;
 	}
@@ -552,7 +543,7 @@ void Book::shareFile() {
 	}
 }
 
-// 添加新的成员函数来更新进度
+// 修改updateUploadProgress函数
 void Book::updateUploadProgress() {
 	if (m_totalFileSize <= 0) return;
 	
@@ -565,7 +556,6 @@ void Book::updateUploadProgress() {
 	
 	// 计算当前进度百分比
 	int progressPercent = static_cast<int>((uploadedBytes * 100) / m_totalFileSize);
-	m_pProgressBar->setValue(progressPercent);
 	
 	// 计算上传速度
 	qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
@@ -583,8 +573,8 @@ void Book::updateUploadProgress() {
 			remainingSeconds = static_cast<int>((m_totalFileSize - uploadedBytes) / 1024.0 / uploadSpeed);
 		}
 		
-		// 更新进度标签
-		QString speedText = QString::number(uploadSpeed, 'f', 2);
+		// 格式化速度和剩余时间文本
+		QString speedText = QString("%1 KB/s").arg(QString::number(uploadSpeed, 'f', 2));
 		QString remainingText;
 		
 		if (remainingSeconds > 60) {
@@ -595,10 +585,10 @@ void Book::updateUploadProgress() {
 			remainingText = QString("%1秒").arg(remainingSeconds);
 		}
 		
-		m_pProgressLabel->setText(QString("已上传: %1% - 速度: %2 KB/s - 剩余时间: %3")
-								 .arg(progressPercent)
-								 .arg(speedText)
-								 .arg(remainingText));
+		// 更新进度对话框
+		if (m_pUploadDialog) {
+			m_pUploadDialog->updateProgress(progressPercent, speedText, remainingText);
+		}
 	}
 }
 
@@ -608,4 +598,12 @@ void Book::onChunkUploadSuccess(qint64 chunkIndex) {
 	
 	// 继续处理队列中的下一个分片
 	m_pTimer->start(100); // 短暂延迟后继续上传
+}
+
+// 在Book的析构函数中添加清理代码
+Book::~Book() {
+	if (m_pUploadDialog) {
+		delete m_pUploadDialog;
+		m_pUploadDialog = nullptr;
+	}
 }

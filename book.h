@@ -14,6 +14,7 @@
 #include <QLabel>
 
 #include "protocol.h"
+#include "uploadprogressdialog.h"
 
 struct FileChunk {
     qint64 index;
@@ -36,7 +37,7 @@ public:
     qint64 m_iTotal;   // 下载文件的总字节大小
     qint64 m_iRevice;  // 下载文件目前接受到文件的大小
     QFile m_pFile;     // 用于本地下载文件使用
-
+    ~Book();
 signals:
 
 public slots:
@@ -79,12 +80,10 @@ private:
     QString m_shareFileName;
     QString m_strFileMD5;
 
-    // 进度显示相关
-    QProgressBar* m_pProgressBar;
-    QLabel* m_pProgressLabel;
     QTimer* m_pProgressTimer;
     qint64 m_uploadStartTime;
     qint64 m_lastUploadedBytes;
+    UploadProgressDialog* m_pUploadDialog;
 
 public:
     QQueue<FileChunk> m_uploadQueue;

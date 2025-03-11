@@ -31,7 +31,8 @@ SOURCES += main.cpp\
     friend.cpp \
     book.cpp \
     privatechat.cpp \
-    sharefile.cpp
+    sharefile.cpp\
+    uploadprogressdialog.cpp
 
 HEADERS  += tcpclient.h \
     protocol.h \
@@ -40,7 +41,8 @@ HEADERS  += tcpclient.h \
     friend.h \
     book.h \
     privatechat.h \
-    sharefile.h
+    sharefile.h\
+    uploadprogressdialog.h
 
 FORMS    += tcpclient.ui \
     online.ui \
