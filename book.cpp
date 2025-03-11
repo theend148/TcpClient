@@ -67,6 +67,8 @@ Book::Book(QWidget* parent) : QWidget(parent) {
 	// 添加上传进度更新的定时器
 	m_pProgressTimer = new QTimer(this);
 	connect(m_pProgressTimer, &QTimer::timeout, this, &Book::updateUploadProgress);
+
+	m_isUploading = false;
 }
 
 void Book::updateDirList(const PDU* pdu) {
@@ -331,62 +333,122 @@ void Book::initializeUpload() {
 
 void Book::uploadPre() {
 	QString strCurPath = TcpClient::getInstance().curPath();
-	m_strUploadFilePath = QFileDialog::getOpenFileName();
+	QStringList filePaths = QFileDialog::getOpenFileNames(this, "选择要上传的文件");
 
-	if (m_strUploadFilePath.isEmpty()) {
-		QMessageBox::warning(this, "上传文件", "上传文件名称不能为空");
+	if (filePaths.isEmpty()) {
 		return;
 	}
 
-	QFile file(m_strUploadFilePath);
-	if (!file.open(QIODevice::ReadOnly)) {
-		QMessageBox::warning(this, "上传文件", "无法打开文件");
+	// 如果进度对话框不存在，创建它
+	if (!m_pUploadDialog) {
+		m_pUploadDialog = new UploadProgressDialog(this);
+	}
+	
+	// 处理每个选中的文件
+	for (const QString& filePath : filePaths) {
+		QFile file(filePath);
+		if (!file.open(QIODevice::ReadOnly)) {
+			QMessageBox::warning(this, "上传文件", 
+				QString("无法打开文件: %1").arg(filePath));
+			continue;
+		}
+
+		UploadFileInfo fileInfo;
+		fileInfo.filePath = filePath;
+		fileInfo.fileSize = file.size();
+		file.close();
+
+		fileInfo.fileMD5 = calculateFileMD5(filePath);
+		if (fileInfo.fileMD5.isEmpty()) {
+			QMessageBox::warning(this, "上传文件", 
+				QString("计算文件MD5失败: %1").arg(filePath));
+			continue;
+		}
+
+		int idx = filePath.lastIndexOf('/');
+		fileInfo.fileName = filePath.right(filePath.size() - idx - 1);
+
+		// 将文件添加到进度对话框
+		m_pUploadDialog->addFile(fileInfo.fileName, fileInfo.fileSize);
+		
+		// 将文件信息添加到上传队列
+		m_uploadFileQueue.enqueue(fileInfo);
+	}
+
+	// 显示进度对话框
+	m_pUploadDialog->show();
+
+	// 如果当前没有在上传，开始上传队列中的第一个文件
+	if (!m_isUploading && !m_uploadFileQueue.isEmpty()) {
+		startNextFileUpload();
+	}
+}
+
+void Book::startNextFileUpload() {
+	if (m_uploadFileQueue.isEmpty()) {
+		m_isUploading = false;
 		return;
 	}
 
-	// 计算文件大小和MD5
-	m_totalFileSize = file.size();
-	file.close();
-
-	m_strFileMD5 = calculateFileMD5(m_strUploadFilePath);
-	if (m_strFileMD5.isEmpty()) {
-		QMessageBox::warning(this, "上传文件", "计算文件MD5失败");
-		return;
-	}
-
+	m_isUploading = true;
+	UploadFileInfo& fileInfo = m_uploadFileQueue.head();
+	
+	// 设置当前文件信息
+	m_strUploadFilePath = fileInfo.filePath;
+	m_totalFileSize = fileInfo.fileSize;
+	m_strFileMD5 = fileInfo.fileMD5;
+	
 	// 清空已上传分片列表
 	m_uploadedChunks.clear();
 
 	// 发送初始化请求
 	initializeUpload();
-
-	// 初始化进度显示
-	int idx = m_strUploadFilePath.lastIndexOf('/');
-	QString fileName = m_strUploadFilePath.right(m_strUploadFilePath.size() - idx - 1);
-	
-	// 创建并显示上传进度对话框
-	m_pUploadDialog = new UploadProgressDialog(fileName, this);
-	m_pUploadDialog->show();
 	
 	m_uploadStartTime = QDateTime::currentMSecsSinceEpoch();
 	m_lastUploadedBytes = 0;
 	
 	// 启动进度更新定时器
-	m_pProgressTimer->start(1000); // 每秒更新一次
+	m_pProgressTimer->start(1000);
 }
 
 void Book::processUploadQueue() {
 	m_pTimer->stop();
 
 	if (m_uploadQueue.isEmpty()) {
-		if (m_pUploadDialog) {
-			m_pUploadDialog->setCompleted();
-			// 延迟关闭对话框
-			QTimer::singleShot(1000, m_pUploadDialog, &QDialog::close);
-			m_pUploadDialog->deleteLater();
-			m_pUploadDialog = nullptr;
+		// 当前文件上传完成
+		if (!m_uploadFileQueue.isEmpty()) {
+			QString completedFileName = m_uploadFileQueue.head().fileName;
+			if (m_pUploadDialog) {
+				m_pUploadDialog->setFileCompleted(completedFileName);
+			}
+			m_uploadFileQueue.dequeue();
+
+			// 停止进度更新定时器
+			m_pProgressTimer->stop();
 		}
-		m_pProgressTimer->stop();
+
+		// 检查是否还有文件需要上传
+		if (!m_uploadFileQueue.isEmpty()) {
+			// 开始上传下一个文件
+			QTimer::singleShot(1000, this, &Book::startNextFileUpload);
+		}
+		else {
+			// 所有文件上传完成
+			m_isUploading = false;
+
+			// 如果进度对话框存在且没有活动的上传
+			if (m_pUploadDialog && !m_pUploadDialog->hasActiveUploads()) {
+				QTimer::singleShot(2000, [this]() {
+					if (m_pUploadDialog) {
+						m_pUploadDialog->close();
+						m_pUploadDialog->hide();
+						m_pUploadDialog->deleteLater();
+						m_pUploadDialog = nullptr;
+					}
+					});
+			}
+		}
+
 		flushDir();
 		return;
 	}
@@ -547,6 +609,8 @@ void Book::shareFile() {
 void Book::updateUploadProgress() {
 	if (m_totalFileSize <= 0) return;
 	
+	UploadFileInfo& currentFile = m_uploadFileQueue.head();
+	
 	// 计算已上传的字节数
 	qint64 uploadedBytes = 0;
 	for (qint64 chunkIndex : m_uploadedChunks) {
@@ -562,18 +626,15 @@ void Book::updateUploadProgress() {
 	qint64 elapsedTime = currentTime - m_uploadStartTime;
 	
 	if (elapsedTime > 0) {
-		// 计算每秒上传的KB数
 		double uploadSpeed = (uploadedBytes - m_lastUploadedBytes) / (elapsedTime / 1000.0) / 1024.0;
 		m_lastUploadedBytes = uploadedBytes;
 		m_uploadStartTime = currentTime;
 		
-		// 估算剩余时间（秒）
 		int remainingSeconds = 0;
 		if (uploadSpeed > 0) {
 			remainingSeconds = static_cast<int>((m_totalFileSize - uploadedBytes) / 1024.0 / uploadSpeed);
 		}
 		
-		// 格式化速度和剩余时间文本
 		QString speedText = QString("%1 KB/s").arg(QString::number(uploadSpeed, 'f', 2));
 		QString remainingText;
 		
@@ -585,9 +646,12 @@ void Book::updateUploadProgress() {
 			remainingText = QString("%1秒").arg(remainingSeconds);
 		}
 		
-		// 更新进度对话框
+		// 更新进度对话框中当前文件的进度
 		if (m_pUploadDialog) {
-			m_pUploadDialog->updateProgress(progressPercent, speedText, remainingText);
+			m_pUploadDialog->updateFileProgress(currentFile.fileName, 
+											  progressPercent, 
+											  speedText, 
+											  remainingText);
 		}
 	}
 }

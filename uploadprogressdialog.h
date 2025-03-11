@@ -5,18 +5,33 @@
 #include <QProgressBar>
 #include <QLabel>
 #include <QVBoxLayout>
+#include <QTableWidget>
+#include <QMap>
+
+struct FileProgressInfo {
+	QString fileName;
+	qint64 fileSize;
+	int progress;
+	QString speed;
+	QString remainingTime;
+	bool completed;
+};
 
 class UploadProgressDialog : public QDialog {
-    Q_OBJECT
+	Q_OBJECT
 public:
-    explicit UploadProgressDialog(const QString& fileName, QWidget* parent = nullptr);
-    void updateProgress(int percent, const QString& speed, const QString& remainingTime);
-    void setCompleted();
+	explicit UploadProgressDialog(QWidget* parent = nullptr);
+
+	void addFile(const QString& fileName, qint64 fileSize);
+	void updateFileProgress(const QString& fileName, int percent, const QString& speed, const QString& remainingTime);
+	void setFileCompleted(const QString& fileName);
+	bool hasActiveUploads() const;
 
 private:
-    QLabel* m_pFileNameLabel;
-    QLabel* m_pProgressLabel;
-    QProgressBar* m_pProgressBar;
+	QTableWidget* m_pProgressTable;
+	QMap<QString, int> m_fileRows;  // 文件名到行号的映射
+	void setupUI();
+	void updateTotalProgress();
 };
 
 #endif // UPLOADPROGRESSDIALOG_H 

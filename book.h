@@ -23,6 +23,14 @@ struct FileChunk {
     bool uploaded;
 };
 
+struct UploadFileInfo {
+    QString filePath;
+    QString fileName;
+    qint64 fileSize;
+    QString fileMD5;
+    QQueue<FileChunk> chunks;
+};
+
 class Book : public QWidget {
     Q_OBJECT
 public:
@@ -83,7 +91,8 @@ private:
     QTimer* m_pProgressTimer;
     qint64 m_uploadStartTime;
     qint64 m_lastUploadedBytes;
-    UploadProgressDialog* m_pUploadDialog;
+    UploadProgressDialog* m_pUploadDialog=nullptr;
+    void startNextFileUpload();
 
 public:
     QQueue<FileChunk> m_uploadQueue;
@@ -91,6 +100,8 @@ public:
     static qint64 CHUNK_SIZE;  // 2MB
     qint64 m_totalFileSize;
     QTimer* m_pTimer;  // 定时器执行上传文件，【防止发送文件数据过快导致粘包】
+    QQueue<UploadFileInfo> m_uploadFileQueue;  // 文件上传队列
+    bool m_isUploading;  // 是否正在上传文件
 };
 
 
