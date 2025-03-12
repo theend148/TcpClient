@@ -341,6 +341,7 @@ void TcpClient::recvMsg() {
         }
         return;
     }
+	
     // 通信对象的总大小
     uint uiPDULen = 0;
     // 先获取通信对象的总大小
