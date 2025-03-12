@@ -3,15 +3,15 @@
 
 #include <QFile>
 #include <QHBoxLayout>
+#include <QLabel>
 #include <QListWidgetItem>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QQueue>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QtCore/QCryptographicHash>
-#include <QProgressBar>
-#include <QLabel>
 
 #include "protocol.h"
 #include "uploadprogressdialog.h"
@@ -91,7 +91,7 @@ private:
     QTimer* m_pProgressTimer;
     qint64 m_uploadStartTime;
     qint64 m_lastUploadedBytes;
-    UploadProgressDialog* m_pUploadDialog=nullptr;
+    UploadProgressDialog* m_pUploadDialog = nullptr;
     void startNextFileUpload();
 
 public:
@@ -101,8 +101,7 @@ public:
     qint64 m_totalFileSize;
     QTimer* m_pTimer;  // 定时器执行上传文件，【防止发送文件数据过快导致粘包】
     QQueue<UploadFileInfo> m_uploadFileQueue;  // 文件上传队列
-    bool m_isUploading;  // 是否正在上传文件
+    bool m_isUploading;                        // 是否正在上传文件
 };
-
 
 #endif  // BOOK_H

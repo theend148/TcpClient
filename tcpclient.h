@@ -17,6 +17,7 @@
 #include<QThread>
 #include<vector>
 #include"demo.h"
+#include "downloadprogressdialog.h"
 
 
 namespace Ui {
@@ -75,6 +76,7 @@ private:
 	quint16 m_usPort;//服务端的port
 	QString m_strLoginName;//登录用户名
 	QString m_strCurPath;//当前文件路径
+	DownloadProgressDialog *m_downloadDialog;
 	// 注册
 	void regist(PDU* pdu);
 	// 注册
